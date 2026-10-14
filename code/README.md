@@ -1,6 +1,6 @@
 # 24B2509 – TTS bootcamp (Hindi–Hinglish voice cloning with IndicF5)
 
-**Status: midterm.** Task 1 and Task 2 are done. Task 3 (idea) is planned in `idea.md` and not run yet.
+Tasks 1–4 are done. Parts (1)–(3) of `idea.md` were submitted on the midterm form before Task 3 was run.
 
 **AI assistant disclosure:** code in this folder was written with the help of Claude (Anthropic), an AI coding
 assistant. `idea.md` and `report.md` are written by me in my own words.
@@ -29,7 +29,8 @@ python code/warmup.py; python code/warmup.py   # applies the kit's length fix (f
 * `torchcodec` and `code/compat/sitecustomize.py`: torchaudio ≥ 2.9 only reads audio through torchcodec. The shim
   falls back to soundfile if that fails. Audio is unchanged.
 
-`code/kaggle_run1.ipynb` runs everything below on Kaggle (secret `HF_TOKEN`, GPU on, Internet on).
+`code/kaggle_run1.ipynb` runs Tasks 1–2 and `code/kaggle_run2.ipynb` runs Tasks 3–4 on Kaggle (secret `HF_TOKEN`, GPU on,
+Internet on).
 
 ## Task 1 – measure the baseline
 
@@ -79,7 +80,55 @@ The Hindi items' text is not changed by normalization. Their small difference (0
 val_hi_05) is GPU run-to-run variation: a fresh run of the unchanged baseline on the same machine also gives
 0.0375 (`code/logs/repro.json`).
 
-## Task 3 – planned (see `idea.md`)
+## Task 3 – idea: rule-based English letter-to-sound conversion (`code/translit.py`, no model)
 
-Not run yet. `results.json` has the target set: `english_word_error` on `hinglish`, building on the Task 2 text,
-with `predictions/val_control/` as the control.
+`transliterate_text()` rewrites every Latin-script word in Devanagari the way an Indian speaker reads it. It uses
+general spelling rules, not a word list:
+
+* letter groups: sh/ch/th/ph/ck, tion/sion → शन, igh → ाइ, ee/ea → ी, oo → ू, ou → ाउ, ew → यू
+* "magic e" vowels; a silent final e; final y → ी
+* Indian-English vowel colours: o in a closed syllable → ॉ; a → ै / ा by context; al+k/l → ॉ
+* soft c/g; anusvara before stop consonants; doubled consonants are said once
+
+It runs after the Task 2 normalizer, and all other settings are the baseline's (seed 0, one candidate). The rules
+were written from the 17 English words in the validation items plus general Indian-English pronunciation, never
+from the evaluation text. At the text level, 14/17 validation words match the `spoken` spelling exactly (3.4 %
+character difference).
+
+```bash
+python code/make_t3_text.py --kit . --out out/t3_text.csv          # id,split,text,t3_text (all 64 items)
+python baseline/run_baseline.py --items data/val_items.csv  --out out/val_idea --text-csv out/t3_text.csv --text-column t3_text --seed 0
+python baseline/run_baseline.py --items data/eval_items.csv --out out/t3_idea  --text-csv out/t3_text.csv --text-column t3_text --seed 0
+python metrics.py out/val_idea --json out/val_idea.json --csv out/val_idea.csv
+# out/val_idea -> predictions/val_idea/, out/t3_idea -> predictions/t3_idea/
+```
+
+| validation | CER all | hard | hindi | hinglish | long | SIM |
+|---|---|---|---|---|---|---|
+| baseline | 0.2421 | 0.4583 | 0.0342 | 0.3020 | 0.0318 | 0.8303 |
+| control (Task 2 text, `val_control/`) | 0.1231 | 0.0989 | 0.0375 | 0.3020 | 0.0318 | 0.8371 |
+| **idea (`val_idea/`)** | **0.0582** | 0.0989 | 0.0375 | **0.0421** | 0.0318 | **0.8411** |
+
+The idea changes only Latin-script words, so only Hinglish moves: 0.302 → 0.042 against the control. Logs are in
+`code/logs/val_idea.*` and `code/logs/t3_text.csv`.
+
+## Task 4 – faster: the Task 3 system with `nfe_step=16`
+
+```bash
+# same Kaggle session, same GPU (GPU 0), model loaded and one warm-up excluded by run_baseline.py
+python baseline/run_baseline.py --items data/val_items.csv --out out/baseline_val --seed 0                    # baseline timing
+python baseline/run_baseline.py --items data/val_items.csv --out out/val_fast --text-csv out/t3_text.csv \
+    --text-column t3_text --seed 0 --set nfe_step=16                                                           # fast timing
+python metrics.py out/val_fast --json out/val_fast.json --csv out/val_fast.csv
+python baseline/run_baseline.py --items data/eval_items.csv --out out/t4_fast --text-csv out/t3_text.csv \
+    --text-column t3_text --seed 0 --set nfe_step=16                                                           # -> predictions/t4_fast/
+```
+
+| | seconds for the 24 validation items | validation CER |
+|---|---|---|
+| baseline (nfe 32) | 563.6 | 0.2421 |
+| fast (Task 3 + nfe 16) | 297.4 | 0.0618 (Task 3: 0.0582; ratio 1.06 ≤ 1.2) |
+
+Speed-up = 563.6 / 297.4 = **1.90×**. Both timing files are in `code/logs/` (`baseline_val_timing.json`,
+`val_fast_timing.json`). During both timed runs, the second T4 was busy with the Task 3 synthesis, so the two
+timings share the same conditions.

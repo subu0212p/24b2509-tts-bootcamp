@@ -12,23 +12,32 @@
     "val_cer_hard": 0.0989
   },
   "task3": {
-    "method_name": "Rule-based Indian-English spelling-to-Devanagari converter for Latin-script words",
+    "method_name": "Rule-based Indian-English letter-to-sound converter: Latin-script words rewritten in Devanagari (code/translit.py), applied after the Task 2 normalizer",
     "targeted_failure": "english_word_error",
     "targeted_category": "hinglish",
     "builds_on_task2": true,
-    "settings": {},
-    "val_cer": null,
-    "val_sim": null,
-    "val_cer_targeted": null,
+    "settings": {
+      "text": "transliterate_text(normalize(text))",
+      "decoding": "baseline config.yaml (nfe_step 32, cfg 2.0, sway -1.0, speed 1.0)",
+      "seed": 0,
+      "candidates": 1
+    },
+    "val_cer": 0.0582,
+    "val_sim": 0.8411,
+    "val_cer_targeted": 0.0421,
     "val_control_cer": 0.1231
   },
   "task4": {
-    "method_name": "",
-    "settings": {},
-    "val_cer": null,
-    "baseline_seconds": null,
-    "fast_seconds": null,
-    "speedup": null
+    "method_name": "Task 3 system with 16 flow-matching steps instead of 32",
+    "settings": {
+      "text": "transliterate_text(normalize(text))",
+      "nfe_step": 16,
+      "seed": 0
+    },
+    "val_cer": 0.0618,
+    "baseline_seconds": 563.606,
+    "fast_seconds": 297.433,
+    "speedup": 1.895
   },
   "_help": {
     "numbers": "All CER/SIM values are what metrics.py prints on the validation audio you submit. Leave null for tasks you skip.",

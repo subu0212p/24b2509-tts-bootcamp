@@ -3,3 +3,5 @@
 (2) Hypothesis and method. Since IndicF5 primarily learned from Devanagari text, it likely struggles with Latin-script pronunciation. I propose converting English words into Devanagari phonetic representations using reusable rules rather than fixed mappings. These include sh→श, ph→फ, ee→ी, tion→शन, silent final e, magic-e vowels, o→ऑ before consonants, and soft c before e/i. Conversion happens after Task 2 normalization, preserving existing Hindi text.
 
 (3) Prediction. I expect Hinglish CER to improve from 0.30 to 0.12–0.15 without significantly affecting other categories or SIM. Possible challenges include irregular spellings, limited validation coverage (17 words), and differences between speech recognizers.
+
+(4) Results and learning. Hinglish CER dropped from 0.302 to 0.042 (86%), exceeding my prediction. Overall CER improved from 0.123 to 0.058; SIM rose from 0.837 to 0.841. The issue was Latin script, not English sounds. Difficult consonant clusters remain: "न्यू" became "निव" (val_hg_02).
