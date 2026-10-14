@@ -1,0 +1,5 @@
+(1) Failure. IndicF5 struggles to pronounce English words embedded in Hindi sentences (`english_word_error`). In val_hg_01, Hindi speech is clear, but "office", "internet", and "slow" sound distorted (CER 0.45). Similarly, val_hg_06 mispronounces "weekend", "movie", and "shopping" (CER 0.32). Average Hinglish CER is 0.30, compared to 0.03 for Hindi.
+
+(2) Hypothesis and method. Since IndicF5 primarily learned from Devanagari text, it likely struggles with Latin-script pronunciation. I propose converting English words into Devanagari phonetic representations using reusable rules rather than fixed mappings. These include sh→श, ph→फ, ee→ी, tion→शन, silent final e, magic-e vowels, o→ऑ before consonants, and soft c before e/i. Conversion happens after Task 2 normalization, preserving existing Hindi text.
+
+(3) Prediction. I expect Hinglish CER to improve from 0.30 to 0.12–0.15 without significantly affecting other categories or SIM. Possible challenges include irregular spellings, limited validation coverage (17 words), and differences between speech recognizers.
